@@ -1,0 +1,77 @@
+version: '3.3'
+
+services:
+
+  spark-master:
+    image: lab41/spark-master
+    container_name: spark-master
+    expose:
+      - 7001
+      - 7002
+      - 7003
+      - 7004
+      - 7005
+      - 7006
+      - 7077
+      - 6066
+    ports:
+      - 4040:4040
+      - 6066:6066
+      - 7077:7077
+      - 8080:8080
+    volumes:
+      - ./runtime/cdh5/hadoop/conf:/etc/hadoop/conf
+      - ./runtime/cdh5/hive/conf:/etc/hive/conf
+
+  spark-worker:
+    image: lab41/spark-worker
+    expose:
+      - 7012
+      - 7013
+      - 7014
+      - 7015
+      - 7016
+      - 8881
+    ports:
+      - 8081:8081
+    environment:
+      SPARK_MASTER: "spark://spark-master:7077"
+    links:
+      - spark-master
+    volumes:
+      - ./runtime/cdh5/hadoop/conf:/etc/hadoop/conf
+      - ./runtime/cdh5/hive/conf:/etc/hive/conf
+
+  web:
+    build: ./
+    image: web
+    container_name: web
+    environment:
+      - APP_SETTINGS=project.server.config.DevelopmentConfig
+    ports:
+      - '5001:5000'
+    command: python manage.py runserver -h 0.0.0.0
+    volumes:
+      - .:/usr/src/app
+    links:
+      - spark-master
+      - spark-worker
+    depends_on:
+      - redis
+      - spark-master
+      - spark-worker
+
+  worker:
+    image: web
+    container_name: worker
+    environment:
+      - APP_SETTINGS=project.server.config.DevelopmentConfig
+    command: /usr/local/spark/bin/spark-submit --master spark://spark-master:7077 --class endpoint manage.py run_worker
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - redis
+      - web
+
+  redis:
+    image: redis:3.2.11
