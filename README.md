@@ -1,6 +1,6 @@
 # Flask + Redis Queue + PySpark + Docker
 
-Example of how to handle background processes with Flask, Redis Queue, and Docker
+Just a boilerplate for PySpark and Flask
 
 ### Quick Start
 
