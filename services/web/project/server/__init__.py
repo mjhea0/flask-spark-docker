@@ -1,4 +1,4 @@
-# project/server/__init__.py
+# services/web/server/__init__.py
 
 
 import os
@@ -20,5 +20,5 @@ app_settings = os.getenv(
 app.config.from_object(app_settings)
 
 
-from project.server.main.views import main_blueprint
+from server.main.views import main_blueprint
 app.register_blueprint(main_blueprint)

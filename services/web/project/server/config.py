@@ -1,4 +1,4 @@
-# project/server/config.py
+# services/web/server/config.py
 
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))

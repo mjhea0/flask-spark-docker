@@ -7,7 +7,7 @@ import redis
 from rq import Connection, Worker
 from flask_script import Manager
 
-from project.server import app
+from server import app
 
 
 manager = Manager(app)

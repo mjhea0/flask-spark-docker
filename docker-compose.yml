@@ -1,10 +1,19 @@
-version: '3.3'
+version: '3.4'
 
 services:
 
   spark-master:
-    image: lab41/spark-master
     container_name: spark-master
+    image: spark
+    build:
+      context: ./services/spark
+      dockerfile: Dockerfile
+    command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
+    hostname: spark-master
+    environment:
+      MASTER: spark://spark-master:7077
+      SPARK_CONF_DIR: /conf
+      SPARK_PUBLIC_DNS: localhost
     expose:
       - 7001
       - 7002
@@ -20,11 +29,21 @@ services:
       - 7077:7077
       - 8080:8080
     volumes:
-      - ./runtime/cdh5/hadoop/conf:/etc/hadoop/conf
-      - ./runtime/cdh5/hive/conf:/etc/hive/conf
+      - ./services/spark/conf/master:/conf
+      - ./services/spark/data:/tmp/data
 
   spark-worker:
-    image: lab41/spark-worker
+    image: spark
+    container_name: spark-worker
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    hostname: spark-worker
+    environment:
+      SPARK_CONF_DIR: /conf
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 1g
+      SPARK_WORKER_PORT: 8881
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_PUBLIC_DNS: localhost
     expose:
       - 7012
       - 7013
@@ -34,25 +53,27 @@ services:
       - 8881
     ports:
       - 8081:8081
-    environment:
-      SPARK_MASTER: "spark://spark-master:7077"
+    volumes:
+      - ./services/spark/conf/worker:/conf
+      - ./services/spark/data:/tmp/data
     links:
       - spark-master
-    volumes:
-      - ./runtime/cdh5/hadoop/conf:/etc/hadoop/conf
-      - ./runtime/cdh5/hive/conf:/etc/hive/conf
+    depends_on:
+      - spark-master
 
   web:
-    build: ./
-    image: web
     container_name: web
-    environment:
-      - APP_SETTINGS=project.server.config.DevelopmentConfig
-    ports:
-      - '5001:5000'
-    command: python manage.py runserver -h 0.0.0.0
+    image: web
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
     volumes:
-      - .:/usr/src/app
+      - './services/web/project:/usr/src/app'
+    ports:
+      - 5009:5000
+    command: python manage.py runserver -h 0.0.0.0
+    environment:
+      - APP_SETTINGS=server.config.DevelopmentConfig
     links:
       - spark-master
       - spark-worker
@@ -63,12 +84,12 @@ services:
 
   worker:
     image: web
-    container_name: worker
+    container_name: redis-worker
     environment:
-      - APP_SETTINGS=project.server.config.DevelopmentConfig
-    command: /usr/local/spark/bin/spark-submit --master spark://spark-master:7077 --class endpoint manage.py run_worker
+      - APP_SETTINGS=server.config.DevelopmentConfig
+    command: spark-submit --master spark://spark-master:7077 --class endpoint manage.py run_worker
     volumes:
-      - .:/usr/src/app
+      - './services/web/project:/usr/src/app'
     depends_on:
       - redis
       - web

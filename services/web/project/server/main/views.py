@@ -1,11 +1,11 @@
-# project/server/main/views.py
+# services/web/server/main/views.py
 
 
 import redis
 from rq import Queue, push_connection, pop_connection
 from flask import current_app, render_template, Blueprint, jsonify, request
 
-from project.server.main.tasks import create_task
+from server.main.tasks import create_task
 
 main_blueprint = Blueprint('main', __name__,)
 
